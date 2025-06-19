@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import socket from '../socket';
 
-function Receive() {
-  const [roomId, setRoomId] = useState('');
+function Receive({ roomId, onReceive, onCancel }) {
   const [joined, setJoined] = useState(false);
   const [receiving, setReceiving] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -42,7 +41,12 @@ function Receive() {
     };
 
     const handleFileComplete = ({ fileName }) => {
-      if (canceled) return;
+      if (canceled) {
+        chunksRef.current = [];
+        totalChunksRef.current = 0;
+        fileNameRef.current = '';
+        return;
+      }
       const allChunks = chunksRef.current;
       const blob = new Blob(allChunks);
       const url = window.URL.createObjectURL(blob);
@@ -56,7 +60,7 @@ function Receive() {
       totalChunksRef.current = 0;
       fileNameRef.current = '';
       setJoined(false);
-      setRoomId('');
+      onCancel();
     };
 
     const handleCancelTransfer = () => {
@@ -66,7 +70,6 @@ function Receive() {
       totalChunksRef.current = 0;
       fileNameRef.current = '';
       setJoined(false);
-      setRoomId('');
       setCanceled(true);
     };
 
@@ -78,46 +81,42 @@ function Receive() {
       socket.off('send-file-complete', handleFileComplete);
       socket.off('cancel-transfer', handleCancelTransfer);
     };
-  }, [receiving]);
+  }, [receiving, canceled, onCancel]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center text-green-600 mb-6">📥 Receive File</h1>
+    <div>
+      <input
+        type="text"
+        placeholder="Enter Code from Sender"
+        className="w-full px-4 py-2 border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-black text-black bg-gray-100"
+        value={roomId}
+        onChange={(e) => onReceive(e.target.value)}
+        disabled={joined && !canceled}
+      />
 
-        <input
-          type="text"
-          placeholder="Enter Code from Sender"
-          className="w-full px-4 py-2 border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-green-500"
-          value={roomId}
-          onChange={(e) => setRoomId(e.target.value)}
-          disabled={joined}
-        />
+      <button
+        onClick={handleJoin}
+        className="w-full bg-black text-white py-2 rounded-md font-medium hover:bg-gray-800 transition mb-4"
+        disabled={!roomId || (joined && !canceled)}
+      >
+        {joined && !canceled ? 'Waiting for file...' : 'Join & Receive'}
+      </button>
 
-        <button
-          onClick={handleJoin}
-          className="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition mb-4"
-          disabled={!roomId || joined}
-        >
-          {joined ? 'Waiting for file...' : 'Join & Receive'}
-        </button>
-
-        {receiving && (
-          <div className="mt-4 text-center">
-            <p className="text-lg">Receiving file...</p>
-            <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-              <div
-                className="bg-green-600 h-2.5 rounded-full"
-                style={{ width: `${progress}%` }}
-              ></div>
-            </div>
-            <p className="mt-2 text-sm text-gray-500">{progress.toFixed(1)}%</p>
+      {receiving && !canceled && (
+        <div className="mt-4 text-center w-full">
+          <p className="text-lg text-black">Receiving file...</p>
+          <div className="w-full bg-gray-300 rounded-full h-2.5 mt-2 overflow-hidden">
+            <div
+              className="bg-black h-2.5 rounded-full"
+              style={{ width: `${progress}%` }}
+            ></div>
           </div>
-        )}
-        {canceled && (
-          <div className="mt-4 text-center text-red-600 font-semibold">Transfer was canceled by sender.</div>
-        )}
-      </div>
+          <p className="mt-2 text-sm text-gray-500">{progress.toFixed(1)}%</p>
+        </div>
+      )}
+      {canceled && (
+        <div className="mt-4 text-center text-black font-semibold">Transfer was canceled by sender.</div>
+      )}
     </div>
   );
 }
