@@ -6,20 +6,49 @@ function Receive({ roomId, onReceive, onCancel }) {
   const [receiving, setReceiving] = useState(false);
   const [progress, setProgress] = useState(0);
   const [canceled, setCanceled] = useState(false);
+  const [otp, setOtp] = useState(Array(6).fill(''));
+  const inputRefs = useRef([]);
   const chunksRef = useRef([]);
   const totalChunksRef = useRef(0);
   const fileNameRef = useRef('');
 
+  // On mount, check for roomId in URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const urlRoomId = params.get('roomId');
     if (urlRoomId && !roomId) {
       onReceive(urlRoomId);
+      setOtp(urlRoomId.split('').slice(0, 6));
     }
+    // eslint-disable-next-line
   }, []);
 
+  useEffect(() => {
+    if (roomId && roomId.length === 6) {
+      setOtp(roomId.split(''));
+    }
+  }, [roomId]);
+
+  const handleOtpChange = (idx, value) => {
+    if (!/^[0-9]?$/.test(value)) return; // Only allow single digit numbers
+    const newOtp = [...otp];
+    newOtp[idx] = value;
+    setOtp(newOtp);
+    if (value && idx < 5) {
+      inputRefs.current[idx + 1]?.focus();
+    }
+    const code = newOtp.join('');
+    onReceive(code);
+  };
+
+  const handleOtpKeyDown = (idx, e) => {
+    if (e.key === 'Backspace' && !otp[idx] && idx > 0) {
+      inputRefs.current[idx - 1]?.focus();
+    }
+  };
+
   const handleJoin = () => {
-    if (!roomId) return;
+    if (!roomId || roomId.length !== 6) return;
     socket.emit('join-room', roomId);
     setJoined(true);
     socket.emit('receiver-ready', roomId);
@@ -93,19 +122,28 @@ function Receive({ roomId, onReceive, onCancel }) {
 
   return (
     <div>
-      <input
-        type="text"
-        placeholder="Enter Code from Sender"
-        className="w-full px-4 py-2 border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-black text-black bg-gray-100"
-        value={roomId}
-        onChange={(e) => onReceive(e.target.value)}
-        disabled={joined && !canceled}
-      />
+      <div className="flex justify-center gap-2 mb-4">
+        {otp.map((digit, idx) => (
+          <input
+            key={idx}
+            ref={el => inputRefs.current[idx] = el}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={1}
+            className="w-10 h-12 text-2xl font-mono text-center border border-gray-400 rounded-md shadow-sm bg-white text-black focus:outline-none focus:ring-2 focus:ring-black"
+            value={digit}
+            onChange={e => handleOtpChange(idx, e.target.value)}
+            onKeyDown={e => handleOtpKeyDown(idx, e)}
+            disabled={joined && !canceled}
+          />
+        ))}
+      </div>
 
       <button
         onClick={handleJoin}
         className="w-full bg-black text-white py-2 rounded-md font-medium hover:bg-gray-800 transition mb-4"
-        disabled={!roomId || (joined && !canceled)}
+        disabled={otp.join('').length !== 6 || (joined && !canceled)}
       >
         {joined && !canceled ? 'Waiting for file...' : 'Join & Receive'}
       </button>
