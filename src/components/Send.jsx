@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import socket from '../socket';
 import { QRCodeSVG } from 'qrcode.react';
 
-const CHUNK_SIZE = 64 * 1024; // 64KB
+const CHUNK_SIZE = 64 * 1024;
 
 function Send({ onSend, onCancel }) {
   const [files, setFiles] = useState([]);
@@ -28,7 +28,6 @@ function Send({ onSend, onCancel }) {
     return () => {
       socket.off('receiver-ready', handleReceiverReady);
     };
-    // eslint-disable-next-line
   }, [roomId, files]);
 
   const generateRoomCode = () => {
@@ -108,7 +107,6 @@ function Send({ onSend, onCancel }) {
     if (fileRef.current) fileRef.current.value = '';
   };
 
-  // Drag and drop handlers
   const handleDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -178,7 +176,7 @@ function Send({ onSend, onCancel }) {
           <p className="text-lg font-semibold text-black">Share this code with the receiver:</p>
           <div className="text-2xl font-mono bg-gray-100 rounded p-2 mt-2 inline-block text-black border border-gray-300">{roomId}</div>
           <div className="mt-4 flex justify-center">
-            <QRCodeSVG value={roomId} size={200} />
+            <QRCodeSVG value={`${window.location.origin}/?tab=receive&roomId=${roomId}`} size={200} />
           </div>
           <p className="mt-2 text-sm text-gray-500">Waiting for receiver to join...</p>
         </div>

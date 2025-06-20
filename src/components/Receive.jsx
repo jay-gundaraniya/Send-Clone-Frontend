@@ -10,6 +10,14 @@ function Receive({ roomId, onReceive, onCancel }) {
   const totalChunksRef = useRef(0);
   const fileNameRef = useRef('');
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlRoomId = params.get('roomId');
+    if (urlRoomId && !roomId) {
+      onReceive(urlRoomId);
+    }
+  }, []);
+
   const handleJoin = () => {
     if (!roomId) return;
     socket.emit('join-room', roomId);

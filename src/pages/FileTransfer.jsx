@@ -1,10 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Send from '../components/Send';
 import Receive from '../components/Receive';
 
 function FileTransfer() {
   const [activeTab, setActiveTab] = useState('send');
   const [roomId, setRoomId] = useState('');
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlTab = params.get('tab');
+    const urlRoomId = params.get('roomId');
+    if (urlTab === 'receive') {
+      setActiveTab('receive');
+    }
+    if (urlRoomId) {
+      setRoomId(urlRoomId);
+    }
+  }, []);
 
   const handleReceive = (code) => setRoomId(code);
   const handleCancel = () => setRoomId('');
